@@ -1,0 +1,94 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{% if profile %}Edit Profile{% else %}Account Setup{% endif %} - Premium Estimator</title>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+</head>
+<body>
+    <div class="container">
+        <div class="glass-panel">
+            <div class="header">
+                <h1>{% if profile %}Edit Profile{% else %}Profile Setup{% endif %}</h1>
+                <p>{% if profile %}Update your details below.{% else %}Hi {{ username }}, please complete your details to finish setting up your account.{% endif %}</p>
+            </div>
+
+            {% if error %}
+            <div class="alert alert-error">
+                {{ error }}
+            </div>
+            {% endif %}
+
+            <form action="{{ url_for('create_profile') }}" method="POST">
+                <div class="form-grid">
+                    <div class="input-group">
+                        <label for="first_name">First Name</label>
+                        <input type="text" id="first_name" name="first_name" placeholder="John" value="{{ profile.first_name if profile else '' }}" required>
+                    </div>
+
+                    <div class="input-group">
+                        <label for="last_name">Last Name</label>
+                        <input type="text" id="last_name" name="last_name" placeholder="Doe" value="{{ profile.last_name if profile else '' }}" required>
+                    </div>
+
+                    <div class="input-group">
+                        <label for="age">Age</label>
+                        <input type="number" id="age" name="age" placeholder="e.g. 35" value="{{ profile.age if profile else '' }}" required min="18" max="100">
+                    </div>
+
+                    <div class="input-group">
+                        <label for="sex">Sex</label>
+                        <select id="sex" name="sex" required>
+                            <option value="" disabled {% if not profile %}selected{% endif %}>Select sex</option>
+                            <option value="male" {% if profile and profile.sex == 'male' %}selected{% endif %}>Male</option>
+                            <option value="female" {% if profile and profile.sex == 'female' %}selected{% endif %}>Female</option>
+                        </select>
+                    </div>
+
+                    <div class="input-group">
+                        <label for="bmi">BMI</label>
+                        <input type="number" id="bmi" name="bmi" step="0.1" placeholder="e.g. 24.5" value="{{ profile.bmi if profile else '' }}" required min="10" max="60">
+                    </div>
+
+                    <div class="input-group">
+                        <label for="children">Children</label>
+                        <input type="number" id="children" name="children" placeholder="e.g. 2" value="{{ profile.children if profile else '' }}" required min="0" max="15">
+                    </div>
+
+                    <div class="input-group">
+                        <label for="smoker">Smoker</label>
+                        <select id="smoker" name="smoker" required>
+                            <option value="" disabled {% if not profile %}selected{% endif %}>Select smoker status</option>
+                            <option value="yes" {% if profile and profile.smoker == 'yes' %}selected{% endif %}>Yes</option>
+                            <option value="no" {% if profile and profile.smoker == 'no' %}selected{% endif %}>No</option>
+                        </select>
+                    </div>
+
+                    <div class="input-group">
+                        <label for="region">Region</label>
+                        <select id="region" name="region" required>
+                            <option value="" disabled {% if not profile %}selected{% endif %}>Select region</option>
+                            <option value="southwest" {% if profile and profile.region == 'southwest' %}selected{% endif %}>Southwest</option>
+                            <option value="southeast" {% if profile and profile.region == 'southeast' %}selected{% endif %}>Southeast</option>
+                            <option value="northwest" {% if profile and profile.region == 'northwest' %}selected{% endif %}>Northwest</option>
+                            <option value="northeast" {% if profile and profile.region == 'northeast' %}selected{% endif %}>Northeast</option>
+                        </select>
+                    </div>
+                </div>
+
+                <button type="submit" class="submit-btn" style="margin-top: 1rem;">
+                    <span>{% if profile %}Update Profile{% else %}Complete Account Setup{% endif %}</span>
+                </button>
+
+                {% if profile %}
+                <div style="text-align: center; margin-top: 1.5rem;">
+                    <a href="{{ url_for('index') }}" class="nav-link" style="text-decoration: underline;">Cancel and Go Back</a>
+                </div>
+                {% endif %}
+            </form>
+        </div>
+    </div>
+</body>
+</html>

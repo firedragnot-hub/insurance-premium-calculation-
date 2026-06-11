@@ -1,0 +1,113 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Sign Up - Premium Estimator</title>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+</head>
+<body>
+    <div class="container" style="max-width: 450px;">
+        <div class="glass-panel">
+            <div class="header">
+                <h1>Create Account</h1>
+                <p>Register to start estimating premiums</p>
+            </div>
+
+            <div id="validation-alert" class="alert alert-error" style="display: none;"></div>
+
+            {% if error %}
+            <div class="alert alert-error">
+                {{ error }}
+            </div>
+            {% endif %}
+
+            <form id="signup-form" action="{{ url_for('signup') }}" method="POST" class="auth-form">
+                <div class="input-group">
+                    <label for="username">Username</label>
+                    <input type="text" id="username" name="username" placeholder="e.g. johndoe" required autocomplete="username" minlength="3" maxlength="20">
+                </div>
+
+                <div class="input-group">
+                    <label for="email">Email Address</label>
+                    <input type="email" id="email" name="email" placeholder="e.g. john@example.com" required autocomplete="email">
+                </div>
+
+                <div class="input-group">
+                    <label for="password">Password</label>
+                    <div class="password-input-wrapper">
+                        <input type="password" id="password" name="password" placeholder="••••••••" required autocomplete="new-password" minlength="6">
+                        <button type="button" class="password-toggle" id="pw-toggle" aria-label="Toggle password visibility">
+                            <svg id="eye-icon" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor">
+                                <path d="M12 15a3 3 0 100-6 3 3 0 000 6z" />
+                                <path fill-rule="evenodd" d="M1.323 11.447C2.811 6.976 7.028 3.75 12.001 3.75c4.97 0 9.185 3.223 10.675 7.69.12.362.12.752 0 1.113-1.487 4.471-5.705 7.697-10.677 7.697-4.97 0-9.186-3.223-10.675-7.69a1.762 1.762 0 010-1.113zM17.25 12a5.25 5.25 0 11-10.5 0 5.25 5.25 0 0110.5 0z" clip-rule="evenodd" />
+                            </svg>
+                        </button>
+                    </div>
+                </div>
+
+                <div class="input-group">
+                    <label for="confirm_password">Confirm Password</label>
+                    <div class="password-input-wrapper">
+                        <input type="password" id="confirm_password" name="confirm_password" placeholder="••••••••" required autocomplete="new-password">
+                        <button type="button" class="password-toggle" id="confirm-pw-toggle" aria-label="Toggle confirm password visibility">
+                            <svg id="confirm-eye-icon" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor">
+                                <path d="M12 15a3 3 0 100-6 3 3 0 000 6z" />
+                                <path fill-rule="evenodd" d="M1.323 11.447C2.811 6.976 7.028 3.75 12.001 3.75c4.97 0 9.185 3.223 10.675 7.69.12.362.12.752 0 1.113-1.487 4.471-5.705 7.697-10.677 7.697-4.97 0-9.186-3.223-10.675-7.69a1.762 1.762 0 010-1.113zM17.25 12a5.25 5.25 0 11-10.5 0 5.25 5.25 0 0110.5 0z" clip-rule="evenodd" />
+                            </svg>
+                        </button>
+                    </div>
+                </div>
+
+                <button type="submit" class="submit-btn">
+                    <span>Create Account</span>
+                </button>
+            </form>
+
+            <div class="auth-footer">
+                Already have an account? <a href="{{ url_for('login') }}">Log In</a>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const signupForm = document.getElementById('signup-form');
+        const pwInput = document.getElementById('password');
+        const confirmPwInput = document.getElementById('confirm_password');
+        const validationAlert = document.getElementById('validation-alert');
+
+        // Form Submit Handler (Validate Matching Passwords)
+        signupForm.addEventListener('submit', (e) => {
+            if (pwInput.value !== confirmPwInput.value) {
+                e.preventDefault();
+                validationAlert.textContent = "Passwords do not match.";
+                validationAlert.style.display = "block";
+                confirmPwInput.focus();
+            } else {
+                validationAlert.style.display = "none";
+            }
+        });
+
+        // Setup show/hide functionality for both password inputs
+        function setupPasswordToggle(toggleId, inputId, iconId) {
+            const toggle = document.getElementById(toggleId);
+            const input = document.getElementById(inputId);
+            const icon = document.getElementById(iconId);
+
+            toggle.addEventListener('click', () => {
+                if (input.type === 'password') {
+                    input.type = 'text';
+                    icon.innerHTML = `<path d="M3.53 2.47a.75.75 0 00-1.06 1.06l18 18a.75.75 0 101.06-1.06l-18-18zM22.676 12.553a11.249 11.249 0 01-2.631 4.31l-3.099-3.099a5.25 5.25 0 00-6.71-6.71L7.759 4.577a11.217 11.217 0 014.242-.827c4.97 0 9.185 3.223 10.675 7.69.12.362.12.752 0 1.113z" /><path d="M12.427 17.518a11.168 11.168 0 01-6.426-3.53L4.17 15.82a11.238 11.238 0 01-2.847-4.38 1.758 1.758 0 010-1.113c1.002-3.018 3.268-5.467 6.136-6.666L5.3 1.5a.75.75 0 011.06-1.06l16.037 16.037a.75.75 0 01-1.06 1.06l-1.874-1.874c-1.89 1.258-4.14 1.837-6.036 1.837zm-.426-10.268a3 3 0 00-3.328 3.328L12 13.906V7.25z" />`;
+                } else {
+                    input.type = 'password';
+                    icon.innerHTML = `<path d="M12 15a3 3 0 100-6 3 3 0 000 6z" /><path fill-rule="evenodd" d="M1.323 11.447C2.811 6.976 7.028 3.75 12.001 3.75c4.97 0 9.185 3.223 10.675 7.69.12.362.12.752 0 1.113-1.487 4.471-5.705 7.697-10.677 7.697-4.97 0-9.186-3.223-10.675-7.69a1.762 1.762 0 010-1.113zM17.25 12a5.25 5.25 0 11-10.5 0 5.25 5.25 0 0110.5 0z" clip-rule="evenodd" />`;
+                }
+            });
+        }
+
+        setupPasswordToggle('pw-toggle', 'password', 'eye-icon');
+        setupPasswordToggle('confirm-pw-toggle', 'confirm_password', 'confirm-eye-icon');
+    </script>
+</body>
+</html>

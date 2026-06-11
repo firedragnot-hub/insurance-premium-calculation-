@@ -1,0 +1,160 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Health Insurance Premium Estimator</title>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+</head>
+<body class="has-navbar">
+    <nav class="navbar">
+        <a href="/" class="navbar-brand">Premium Estimator</a>
+        <div class="navbar-user">
+            <span class="user-info">Welcome, <strong>{{ profile.first_name }} {{ profile.last_name }}</strong></span>
+            <a href="{{ url_for('create_profile') }}" class="nav-link">Edit Profile</a>
+            <a href="{{ url_for('logout') }}" class="nav-link logout-btn">Logout</a>
+        </div>
+    </nav>
+    <div class="container">
+        <div class="glass-panel">
+            <div class="header">
+                <h1>Premium Estimator</h1>
+                <p>Calculate your estimated health insurance cost instantly.</p>
+            </div>
+            
+            <form id="prediction-form">
+                <div class="form-grid">
+                    <div class="input-group">
+                        <label for="age">Age</label>
+                        <input type="number" id="age" name="age" placeholder="e.g. 35" value="{{ profile.age }}" required min="18" max="100">
+                    </div>
+
+                    <div class="input-group">
+                        <label for="sex">Sex</label>
+                        <select id="sex" name="sex" required>
+                            <option value="" disabled>Select sex</option>
+                            <option value="male" {% if profile.sex == 'male' %}selected{% endif %}>Male</option>
+                            <option value="female" {% if profile.sex == 'female' %}selected{% endif %}>Female</option>
+                        </select>
+                    </div>
+
+                    <div class="input-group">
+                        <label for="bmi">BMI</label>
+                        <input type="number" id="bmi" name="bmi" step="0.1" placeholder="e.g. 24.5" value="{{ profile.bmi }}" required min="10" max="60">
+                    </div>
+
+                    <div class="input-group">
+                        <label for="children">Children</label>
+                        <input type="number" id="children" name="children" placeholder="e.g. 2" value="{{ profile.children }}" required min="0" max="15">
+                    </div>
+
+                    <div class="input-group">
+                        <label for="smoker">Smoker</label>
+                        <select id="smoker" name="smoker" required>
+                            <option value="" disabled>Select smoker status</option>
+                            <option value="yes" {% if profile.smoker == 'yes' %}selected{% endif %}>Yes</option>
+                            <option value="no" {% if profile.smoker == 'no' %}selected{% endif %}>No</option>
+                        </select>
+                    </div>
+
+                    <div class="input-group">
+                        <label for="region">Region</label>
+                        <select id="region" name="region" required>
+                            <option value="" disabled>Select region</option>
+                            <option value="southwest" {% if profile.region == 'southwest' %}selected{% endif %}>Southwest</option>
+                            <option value="southeast" {% if profile.region == 'southeast' %}selected{% endif %}>Southeast</option>
+                            <option value="northwest" {% if profile.region == 'northwest' %}selected{% endif %}>Northwest</option>
+                            <option value="northeast" {% if profile.region == 'northeast' %}selected{% endif %}>Northeast</option>
+                        </select>
+                    </div>
+                </div>
+
+                <button type="submit" class="submit-btn" id="submit-btn">
+                    <span class="btn-text">Estimate Premium</span>
+                    <span class="loader" style="display: none;"></span>
+                </button>
+            </form>
+
+            <div id="result-container" class="result-container" style="display: none;">
+                <h2>Estimated Annual Premium</h2>
+                <div class="price-tag" id="price-output">$0.00</div>
+                <button class="reset-btn" onclick="resetForm()">Calculate Another</button>
+            </div>
+            
+            <div id="error-container" class="error-container" style="display: none;">
+                <p id="error-message">An error occurred.</p>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        document.getElementById('prediction-form').addEventListener('submit', async function(e) {
+            e.preventDefault();
+            
+            const btn = document.getElementById('submit-btn');
+            const btnText = btn.querySelector('.btn-text');
+            const loader = btn.querySelector('.loader');
+            
+            // UI Loading state
+            btn.disabled = true;
+            btnText.style.display = 'none';
+            loader.style.display = 'inline-block';
+            
+            const formData = {
+                age: document.getElementById('age').value,
+                sex: document.getElementById('sex').value,
+                bmi: document.getElementById('bmi').value,
+                children: document.getElementById('children').value,
+                smoker: document.getElementById('smoker').value,
+                region: document.getElementById('region').value
+            };
+
+            try {
+                const response = await fetch('/predict', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify(formData)
+                });
+                
+                const data = await response.json();
+                
+                document.getElementById('prediction-form').style.display = 'none';
+                
+                if (data.success) {
+                    const priceFormatted = new Intl.NumberFormat('en-US', {
+                        style: 'currency',
+                        currency: 'USD'
+                    }).format(data.prediction);
+                    
+                    document.getElementById('price-output').textContent = priceFormatted;
+                    document.getElementById('result-container').style.display = 'block';
+                    document.getElementById('error-container').style.display = 'none';
+                } else {
+                    document.getElementById('error-message').textContent = "Error: " + data.error;
+                    document.getElementById('error-container').style.display = 'block';
+                    document.getElementById('result-container').style.display = 'none';
+                }
+            } catch (error) {
+                document.getElementById('prediction-form').style.display = 'none';
+                document.getElementById('error-message').textContent = "Connection error. Please try again.";
+                document.getElementById('error-container').style.display = 'block';
+            } finally {
+                // Restore button
+                btn.disabled = false;
+                btnText.style.display = 'inline-block';
+                loader.style.display = 'none';
+            }
+        });
+
+        function resetForm() {
+            document.getElementById('prediction-form').reset();
+            document.getElementById('prediction-form').style.display = 'block';
+            document.getElementById('result-container').style.display = 'none';
+            document.getElementById('error-container').style.display = 'none';
+        }
+    </script>
+</body>
+</html>
