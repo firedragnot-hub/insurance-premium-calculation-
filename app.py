@@ -49,6 +49,66 @@ class DBManager:
     def init_sqlite(self):
         with self.sqlite_conn() as conn:
             c = conn.cursor()
+            
+            # Schema Migration for legacy INTEGER PK tables
+            # 1. users table migration
+            c.execute("SELECT sql FROM sqlite_master WHERE type='table' AND name='users'")
+            users_row = c.fetchone()
+            if users_row:
+                schema = users_row[0]
+                if 'AUTOINCREMENT' in schema or 'id INTEGER' in schema:
+                    try:
+                        c.execute("ALTER TABLE users RENAME TO users_old")
+                        c.execute('''
+                            CREATE TABLE users (
+                                id TEXT PRIMARY KEY,
+                                username TEXT UNIQUE NOT NULL,
+                                email TEXT UNIQUE NOT NULL,
+                                password_hash TEXT NOT NULL,
+                                is_admin INTEGER DEFAULT 0,
+                                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+                            )
+                        ''')
+                        c.execute('''
+                            INSERT INTO users (id, username, email, password_hash, is_admin, created_at)
+                            SELECT CAST(id AS TEXT), username, email, password_hash, is_admin, created_at FROM users_old
+                        ''')
+                        c.execute("DROP TABLE users_old")
+                        conn.commit()
+                    except Exception as ex:
+                        print(f"Error migrating users table: {ex}")
+                        
+            # 2. profiles table migration
+            c.execute("SELECT sql FROM sqlite_master WHERE type='table' AND name='profiles'")
+            profiles_row = c.fetchone()
+            if profiles_row:
+                schema = profiles_row[0]
+                if 'user_id INTEGER' in schema:
+                    try:
+                        c.execute("ALTER TABLE profiles RENAME TO profiles_old")
+                        c.execute('''
+                            CREATE TABLE profiles (
+                                user_id TEXT PRIMARY KEY,
+                                first_name TEXT NOT NULL,
+                                last_name TEXT NOT NULL,
+                                age INTEGER,
+                                sex TEXT,
+                                bmi REAL,
+                                children INTEGER,
+                                smoker TEXT,
+                                region TEXT
+                            )
+                        ''')
+                        c.execute('''
+                            INSERT INTO profiles (user_id, first_name, last_name, age, sex, bmi, children, smoker, region)
+                            SELECT CAST(user_id AS TEXT), first_name, last_name, age, sex, bmi, children, smoker, region FROM profiles_old
+                        ''')
+                        c.execute("DROP TABLE profiles_old")
+                        conn.commit()
+                    except Exception as ex:
+                        print(f"Error migrating profiles table: {ex}")
+
+            # Standard table creation (runs if tables don't exist or after migration)
             c.execute('''
                 CREATE TABLE IF NOT EXISTS users (
                     id TEXT PRIMARY KEY,
@@ -59,7 +119,6 @@ class DBManager:
                     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
                 )
             ''')
-            # Backwards compatibility migration for existing database.db files
             try:
                 c.execute("ALTER TABLE users ADD COLUMN is_admin INTEGER DEFAULT 0")
                 conn.commit()
