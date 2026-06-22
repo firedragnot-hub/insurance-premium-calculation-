@@ -5,6 +5,7 @@ import datetime
 import uuid
 import json
 import sqlite3
+import contextlib
 from functools import wraps
 from flask import Flask, render_template, request, jsonify, redirect, url_for, session, g, flash
 from werkzeug.security import generate_password_hash, check_password_hash
@@ -36,54 +37,62 @@ class DBManager:
         self.init_sqlite()
         self.check_mongo_connection()
         
-    def init_sqlite(self):
-        conn = sqlite3.connect(self.sqlite_path)
-        c = conn.cursor()
-        c.execute('''
-            CREATE TABLE IF NOT EXISTS users (
-                id TEXT PRIMARY KEY,
-                username TEXT UNIQUE NOT NULL,
-                email TEXT UNIQUE NOT NULL,
-                password_hash TEXT NOT NULL,
-                is_admin INTEGER DEFAULT 0,
-                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-            )
-        ''')
-        # Backwards compatibility migration for existing database.db files
+    @contextlib.contextmanager
+    def sqlite_conn(self):
+        conn = sqlite3.connect(self.sqlite_path, timeout=30.0)
         try:
-            c.execute("ALTER TABLE users ADD COLUMN is_admin INTEGER DEFAULT 0")
+            conn.execute("PRAGMA journal_mode=WAL;")
+            yield conn
+        finally:
+            conn.close()
+
+    def init_sqlite(self):
+        with self.sqlite_conn() as conn:
+            c = conn.cursor()
+            c.execute('''
+                CREATE TABLE IF NOT EXISTS users (
+                    id TEXT PRIMARY KEY,
+                    username TEXT UNIQUE NOT NULL,
+                    email TEXT UNIQUE NOT NULL,
+                    password_hash TEXT NOT NULL,
+                    is_admin INTEGER DEFAULT 0,
+                    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+                )
+            ''')
+            # Backwards compatibility migration for existing database.db files
+            try:
+                c.execute("ALTER TABLE users ADD COLUMN is_admin INTEGER DEFAULT 0")
+                conn.commit()
+            except sqlite3.OperationalError:
+                pass
+            c.execute('''
+                CREATE TABLE IF NOT EXISTS profiles (
+                    user_id TEXT PRIMARY KEY,
+                    first_name TEXT NOT NULL,
+                    last_name TEXT NOT NULL,
+                    age INTEGER,
+                    sex TEXT,
+                    bmi REAL,
+                    children INTEGER,
+                    smoker TEXT,
+                    region TEXT
+                )
+            ''')
+            c.execute('''
+                CREATE TABLE IF NOT EXISTS quotes (
+                    id TEXT PRIMARY KEY,
+                    user_id TEXT NOT NULL,
+                    age INTEGER,
+                    sex TEXT,
+                    bmi REAL,
+                    children INTEGER,
+                    smoker TEXT,
+                    region TEXT,
+                    charges REAL,
+                    timestamp TEXT
+                )
+            ''')
             conn.commit()
-        except sqlite3.OperationalError:
-            pass
-        c.execute('''
-            CREATE TABLE IF NOT EXISTS profiles (
-                user_id TEXT PRIMARY KEY,
-                first_name TEXT NOT NULL,
-                last_name TEXT NOT NULL,
-                age INTEGER,
-                sex TEXT,
-                bmi REAL,
-                children INTEGER,
-                smoker TEXT,
-                region TEXT
-            )
-        ''')
-        c.execute('''
-            CREATE TABLE IF NOT EXISTS quotes (
-                id TEXT PRIMARY KEY,
-                user_id TEXT NOT NULL,
-                age INTEGER,
-                sex TEXT,
-                bmi REAL,
-                children INTEGER,
-                smoker TEXT,
-                region TEXT,
-                charges REAL,
-                timestamp TEXT
-            )
-        ''')
-        conn.commit()
-        conn.close()
 
     def check_mongo_connection(self):
         try:
@@ -118,15 +127,14 @@ class DBManager:
         
         # SQLite Fallback
         try:
-            conn = sqlite3.connect(self.sqlite_path)
-            c = conn.cursor()
-            c.execute(
-                "INSERT INTO users (id, username, email, password_hash, is_admin) VALUES (?, ?, ?, ?, ?)",
-                (user_id, username, email, password_hash, is_admin)
-            )
-            conn.commit()
-            conn.close()
-            return user_id
+            with self.sqlite_conn() as conn:
+                c = conn.cursor()
+                c.execute(
+                    "INSERT INTO users (id, username, email, password_hash, is_admin) VALUES (?, ?, ?, ?, ?)",
+                    (user_id, username, email, password_hash, is_admin)
+                )
+                conn.commit()
+                return user_id
         except sqlite3.IntegrityError:
             return None
 
@@ -146,16 +154,15 @@ class DBManager:
                 pass
                 
         # SQLite Fallback
-        conn = sqlite3.connect(self.sqlite_path)
-        conn.row_factory = sqlite3.Row
-        c = conn.cursor()
-        user = c.execute(
-            "SELECT * FROM users WHERE username = ? OR email = ?",
-            (login_input, login_input)
-        ).fetchone()
-        conn.close()
-        if user:
-            return dict(user)
+        with self.sqlite_conn() as conn:
+            conn.row_factory = sqlite3.Row
+            c = conn.cursor()
+            user = c.execute(
+                "SELECT * FROM users WHERE username = ? OR email = ?",
+                (login_input, login_input)
+            ).fetchone()
+            if user:
+                return dict(user)
         return None
 
     def get_profile(self, user_id):
@@ -169,13 +176,12 @@ class DBManager:
                 pass
                 
         # SQLite Fallback
-        conn = sqlite3.connect(self.sqlite_path)
-        conn.row_factory = sqlite3.Row
-        c = conn.cursor()
-        prof = c.execute("SELECT * FROM profiles WHERE user_id = ?", (user_id,)).fetchone()
-        conn.close()
-        if prof:
-            return dict(prof)
+        with self.sqlite_conn() as conn:
+            conn.row_factory = sqlite3.Row
+            c = conn.cursor()
+            prof = c.execute("SELECT * FROM profiles WHERE user_id = ?", (user_id,)).fetchone()
+            if prof:
+                return dict(prof)
         return None
 
     def save_profile(self, user_id, profile_data):
@@ -200,16 +206,15 @@ class DBManager:
                 pass
                 
         # SQLite Fallback
-        conn = sqlite3.connect(self.sqlite_path)
-        c = conn.cursor()
-        c.execute("""
-            INSERT OR REPLACE INTO profiles (user_id, first_name, last_name, age, sex, bmi, children, smoker, region)
-            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
-        """, (user_id, profile_data["first_name"], profile_data["last_name"], int(profile_data["age"]), 
-              profile_data["sex"], float(profile_data["bmi"]), int(profile_data["children"]), 
-              profile_data["smoker"], profile_data["region"]))
-        conn.commit()
-        conn.close()
+        with self.sqlite_conn() as conn:
+            c = conn.cursor()
+            c.execute("""
+                INSERT OR REPLACE INTO profiles (user_id, first_name, last_name, age, sex, bmi, children, smoker, region)
+                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+            """, (user_id, profile_data["first_name"], profile_data["last_name"], int(profile_data["age"]), 
+                  profile_data["sex"], float(profile_data["bmi"]), int(profile_data["children"]), 
+                  profile_data["smoker"], profile_data["region"]))
+            conn.commit()
         return True
 
     def save_quote(self, user_id, quote_data):
@@ -237,15 +242,14 @@ class DBManager:
                 pass
                 
         # SQLite Fallback
-        conn = sqlite3.connect(self.sqlite_path)
-        c = conn.cursor()
-        c.execute("""
-            INSERT INTO quotes (id, user_id, age, sex, bmi, children, smoker, region, charges, timestamp)
-            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-        """, (quote_id, user_id, doc["age"], doc["sex"], doc["bmi"], doc["children"], 
-              doc["smoker"], doc["region"], doc["charges"], doc["timestamp"]))
-        conn.commit()
-        conn.close()
+        with self.sqlite_conn() as conn:
+            c = conn.cursor()
+            c.execute("""
+                INSERT INTO quotes (id, user_id, age, sex, bmi, children, smoker, region, charges, timestamp)
+                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+            """, (quote_id, user_id, doc["age"], doc["sex"], doc["bmi"], doc["children"], 
+                  doc["smoker"], doc["region"], doc["charges"], doc["timestamp"]))
+            conn.commit()
         doc["id"] = quote_id
         return doc
 
@@ -267,22 +271,21 @@ class DBManager:
                 pass
                 
         # SQLite Fallback
-        conn = sqlite3.connect(self.sqlite_path)
-        conn.row_factory = sqlite3.Row
-        c = conn.cursor()
-        q = "SELECT * FROM quotes WHERE user_id = ?"
-        params = [user_id]
-        if smoker_filter:
-            q += " AND smoker = ?"
-            params.append(smoker_filter)
-        if region_filter:
-            q += " AND region = ?"
-            params.append(region_filter)
-        q += " ORDER BY timestamp DESC"
-        
-        rows = c.execute(q, params).fetchall()
-        conn.close()
-        return [dict(r) for r in rows]
+        with self.sqlite_conn() as conn:
+            conn.row_factory = sqlite3.Row
+            c = conn.cursor()
+            q = "SELECT * FROM quotes WHERE user_id = ?"
+            params = [user_id]
+            if smoker_filter:
+                q += " AND smoker = ?"
+                params.append(smoker_filter)
+            if region_filter:
+                q += " AND region = ?"
+                params.append(region_filter)
+            q += " ORDER BY timestamp DESC"
+            
+            rows = c.execute(q, params).fetchall()
+            return [dict(r) for r in rows]
 
     def delete_quote(self, user_id, quote_id):
         if self.mongo_online and self.mongo_db is not None:
@@ -293,12 +296,11 @@ class DBManager:
                 pass
                 
         # SQLite Fallback
-        conn = sqlite3.connect(self.sqlite_path)
-        c = conn.cursor()
-        c.execute("DELETE FROM quotes WHERE id = ? AND user_id = ?", (quote_id, user_id))
-        count = c.rowcount
-        conn.commit()
-        conn.close()
+        with self.sqlite_conn() as conn:
+            c = conn.cursor()
+            c.execute("DELETE FROM quotes WHERE id = ? AND user_id = ?", (quote_id, user_id))
+            count = c.rowcount
+            conn.commit()
         return count > 0
 
     def get_all_users(self):
@@ -311,12 +313,11 @@ class DBManager:
             except Exception:
                 pass
         # SQLite Fallback
-        conn = sqlite3.connect(self.sqlite_path)
-        conn.row_factory = sqlite3.Row
-        c = conn.cursor()
-        users = c.execute("SELECT * FROM users").fetchall()
-        conn.close()
-        return [dict(u) for u in users]
+        with self.sqlite_conn() as conn:
+            conn.row_factory = sqlite3.Row
+            c = conn.cursor()
+            users = c.execute("SELECT * FROM users").fetchall()
+            return [dict(u) for u in users]
 
     def get_all_profiles(self):
         if self.mongo_online and self.mongo_db is not None:
@@ -328,12 +329,11 @@ class DBManager:
             except Exception:
                 pass
         # SQLite Fallback
-        conn = sqlite3.connect(self.sqlite_path)
-        conn.row_factory = sqlite3.Row
-        c = conn.cursor()
-        profiles = c.execute("SELECT * FROM profiles").fetchall()
-        conn.close()
-        return [dict(p) for p in profiles]
+        with self.sqlite_conn() as conn:
+            conn.row_factory = sqlite3.Row
+            c = conn.cursor()
+            profiles = c.execute("SELECT * FROM profiles").fetchall()
+            return [dict(p) for p in profiles]
 
     def get_all_quotes(self):
         if self.mongo_online and self.mongo_db is not None:
@@ -345,12 +345,11 @@ class DBManager:
             except Exception:
                 pass
         # SQLite Fallback
-        conn = sqlite3.connect(self.sqlite_path)
-        conn.row_factory = sqlite3.Row
-        c = conn.cursor()
-        quotes = c.execute("SELECT * FROM quotes").fetchall()
-        conn.close()
-        return [dict(q) for q in quotes]
+        with self.sqlite_conn() as conn:
+            conn.row_factory = sqlite3.Row
+            c = conn.cursor()
+            quotes = c.execute("SELECT * FROM quotes").fetchall()
+            return [dict(q) for q in quotes]
 
 
 # Instantiate DB Manager
@@ -366,11 +365,10 @@ def seed_admin_user():
     else:
         # Check if is_admin is 1, otherwise update it
         try:
-            conn = sqlite3.connect(db_manager.sqlite_path)
-            c = conn.cursor()
-            c.execute("UPDATE users SET is_admin = 1 WHERE username = 'admin'")
-            conn.commit()
-            conn.close()
+            with db_manager.sqlite_conn() as conn:
+                c = conn.cursor()
+                c.execute("UPDATE users SET is_admin = 1 WHERE username = 'admin'")
+                conn.commit()
         except Exception:
             pass
         if db_manager.mongo_online and db_manager.mongo_db is not None:
