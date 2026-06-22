@@ -1,3 +1,16 @@
+# Python virtual environment
+.venv/
 myenviroment/
 __pycache__/
 *.pyc
+
+# Local SQLite databases
+*.db
+database.db
+
+# Large machine learning binary model artifacts
+insurance_model.joblib
+
+# Editor and IDE configurations
+.idea/
+.vscode/

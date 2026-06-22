@@ -1,0 +1,371 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Admin Portal - Insure Platform</title>
+    <!-- Google Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Outfit:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+    <script src="{{ url_for('static', filename='translator.js') }}"></script>
+    <!-- Chart.js and html2pdf CDN -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
+</head>
+<body class="has-navbar">
+
+    <!-- Header / Navbar -->
+    <header class="navbar">
+        <a href="/" class="logo">
+            <svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+                <path d="M12 2C7.5 4 5 7.5 5 11c0 5.5 4.5 9 7 11 2.5-2 7-5.5 7-11 0-3.5-2.5-7-7-9zm0 2.2c2.9 1.4 4.8 4 4.8 6.8 0 4.1-3.2 7-4.8 8.4-1.6-1.4-4.8-4.3-4.8-8.4 0-2.8 1.9-5.4 4.8-6.8zm-2.5 7.3l1.8 1.8 3.5-3.5 1 1-4.5 4.5-2.8-2.8 1-1z"/>
+            </svg>
+            <span>Insure <small style="font-size: 11px; background: var(--primary); color: white; padding: 2px 6px; border-radius: 10px; margin-left: 5px; vertical-align: middle;">ADMIN</small></span>
+        </a>
+        <div class="navbar-user">
+            <div class="lang-selector-container">
+                <select class="lang-select" id="lang-select" onchange="window.changeLanguage(this.value)">
+                    <option value="en">🇺🇸 English</option>
+                    <option value="hi">🇮🇳 हिंदी</option>
+                    <option value="ur">🇵🇰 اردو</option>
+                </select>
+            </div>
+            <span class="user-info">Welcome Admin, <strong>{{ profile.first_name }} {{ profile.last_name }}</strong></span>
+            <a href="/" class="nav-link">User View</a>
+            <a href="{{ url_for('logout') }}" class="nav-link logout-btn">Logout</a>
+        </div>
+    </header>
+
+    <!-- Main Container -->
+    <main class="container main-app" id="admin-dashboard-content" style="margin-top: 40px;">
+        
+        <!-- Controls & Warnings -->
+        <div class="admin-controls-card">
+            <div>
+                <h2>Administrative Data Hub</h2>
+                <p style="color: var(--gray-600); font-size: 14px; margin-top: 4px;">Review system users, profiles, forecast calculations, and demographic analytics.</p>
+            </div>
+            
+            <div style="display: flex; gap: 10px;">
+                <button onclick="downloadPdfReport()" class="btn btn-secondary" style="border-radius: var(--radius-sm); font-size: 13px;">
+                    <svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4M7 10l5 5 5-5M12 15V3"/></svg>
+                    Download PDF Report
+                </button>
+                <button onclick="window.print()" class="btn btn-outline" style="border-radius: var(--radius-sm); font-size: 13px;">
+                    <svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M6 9V2h12v7M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2M6 14h12v8H6v-8z"/></svg>
+                    Print Report
+                </button>
+                <a href="/admin/export/csv" class="btn btn-primary" style="border-radius: var(--radius-sm); font-size: 13px;">
+                    <svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4M7 10l5 5 5-5M12 15V3"/></svg>
+                    Export Excel Sheet (CSV)
+                </a>
+            </div>
+        </div>
+
+        {% if session.get('username') == 'admin' %}
+        <div class="alert alert-error" style="border-left: 5px solid var(--danger); font-size: 13px;">
+            <strong>Security Warning:</strong> You are currently logged in with the default admin username. We highly recommend updating the admin credentials or restricting production database write accesses.
+        </div>
+        {% endif %}
+
+        <!-- Metric Summaries -->
+        <div class="admin-stats-grid">
+            <!-- Stat 1 -->
+            <div class="stat-card">
+                <h3>Total Accounts</h3>
+                <div class="stat-val">{{ analytics.totals.users }}</div>
+                <div class="stat-desc">Registered users in the system</div>
+            </div>
+            <!-- Stat 2 -->
+            <div class="stat-card">
+                <h3>Profiles Completed</h3>
+                <div class="stat-val">{{ analytics.totals.profiles }}</div>
+                <div class="stat-desc">Users who filled demographics details</div>
+            </div>
+            <!-- Stat 3 -->
+            <div class="stat-card">
+                <h3>Total Saved Quotes</h3>
+                <div class="stat-val">{{ analytics.totals.quotes }}</div>
+                <div class="stat-desc">Insurance predictions log count</div>
+            </div>
+            <!-- Stat 4 -->
+            <div class="stat-card">
+                <h3>Average Premium</h3>
+                <div class="stat-val">${{ "{:,.2f}".format(analytics.totals.avg_charge) }}</div>
+                <div class="stat-desc">Avg forecast quote calculation</div>
+            </div>
+        </div>
+
+        <!-- Data Visualizations -->
+        <div class="admin-charts-grid">
+            <!-- Chart 1: Demographics -->
+            <div class="chart-card">
+                <h3>Demographics & Lifestyle Ratio</h3>
+                <div class="chart-container">
+                    <canvas id="lifestyleChart"></canvas>
+                </div>
+            </div>
+            <!-- Chart 2: Regional average charge -->
+            <div class="chart-card">
+                <h3>Average Premium Charges by Region</h3>
+                <div class="chart-container">
+                    <canvas id="regionChart"></canvas>
+                </div>
+            </div>
+            <!-- Chart 3: BMI Category Distribution -->
+            <div class="chart-card" style="grid-column: span 2; width: 100%;">
+                <h3>Population BMI Category Distribution</h3>
+                <div class="chart-container" style="height: 280px;">
+                    <canvas id="bmiChart"></canvas>
+                </div>
+            </div>
+        </div>
+
+        <!-- System Database Table -->
+        <div class="history-section" style="margin-top: 30px;">
+            <div class="history-header" style="border-bottom: 1px solid var(--gray-200); padding-bottom: 12px; margin-bottom: 20px;">
+                <div class="history-title">
+                    <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="var(--primary)" stroke-width="2"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
+                    <span>User Directory & Associated Profiles</span>
+                </div>
+                <span style="font-size: 12px; color: var(--gray-400);">Plain passwords are protected. Showing secure hashes.</span>
+            </div>
+
+            <div class="table-responsive">
+                <table class="history-table">
+                    <thead>
+                        <tr>
+                            <th>User ID</th>
+                            <th>Username</th>
+                            <th>Email Address</th>
+                            <th>Password Hash</th>
+                            <th>Admin?</th>
+                            <th>Name</th>
+                            <th>Age</th>
+                            <th>Sex</th>
+                            <th>BMI</th>
+                            <th>Smoker</th>
+                            <th>Region</th>
+                            <th>Quotes</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for user in users %}
+                        <tr>
+                            <td><span style="font-family: monospace; font-size: 11px; color: var(--gray-400);">{{ user.id[:8] }}...</span></td>
+                            <td><strong>{{ user.username }}</strong></td>
+                            <td>{{ user.email }}</td>
+                            <td>
+                                <span class="hash-badge" title="{{ user.password_hash }}">{{ user.password_hash[:16] }}...</span>
+                            </td>
+                            <td>
+                                <span class="badge {% if user.is_admin %}badge-admin-yes{% else %}badge-admin-no{% endif %}">
+                                    {{ 'YES' if user.is_admin else 'NO' }}
+                                </span>
+                            </td>
+                            <td>{{ user.first_name }} {{ user.last_name }}</td>
+                            <td>{{ user.age }}</td>
+                            <td>{{ user.sex|capitalize }}</td>
+                            <td>{{ user.bmi }}</td>
+                            <td>
+                                {% if user.smoker == 'yes' %}
+                                <span class="badge badge-smoker-yes">Smoker</span>
+                                {% elif user.smoker == 'no' %}
+                                <span class="badge badge-smoker-no">Non-Smoker</span>
+                                {% else %}
+                                -
+                                {% endif %}
+                            </td>
+                            <td>{{ user.region|capitalize }}</td>
+                            <td><strong>{{ user.quotes_count }}</strong></td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+
+    </main>
+
+    <!-- Footer -->
+    <footer style="margin-top: 60px;">
+        <div class="container">
+            <div class="footer-bottom">
+                <p>&copy; 2026 Insure Analytics Engine. Internal Administration Operations Only.</p>
+                <p>System Security Level: Standard SHA-256 / SQLite Fallback Connected</p>
+            </div>
+        </div>
+    </footer>
+
+    <!-- Chart Configuration Script -->
+    <script>
+        const analytics = {{ analytics | tojson }};
+
+        document.addEventListener('DOMContentLoaded', () => {
+            renderLifestyleChart();
+            renderRegionChart();
+            renderBmiChart();
+
+            // Intercept language changes to update Chart.js labels on the fly
+            const originalChangeLanguage = window.changeLanguage;
+            window.changeLanguage = function(lang) {
+                if (originalChangeLanguage) originalChangeLanguage(lang);
+                
+                // Re-render charts with the new language setting
+                if (window.lifestyleChart) window.lifestyleChart.destroy();
+                if (window.regionChart) window.regionChart.destroy();
+                if (window.bmiChart) window.bmiChart.destroy();
+                
+                renderLifestyleChart();
+                renderRegionChart();
+                renderBmiChart();
+            };
+        });
+
+        function renderLifestyleChart() {
+            const ctx = document.getElementById('lifestyleChart').getContext('2d');
+            const smokers = analytics.smoker_counts.yes || 0;
+            const nonSmokers = analytics.smoker_counts.no || 0;
+            const males = analytics.sex_counts.male || 0;
+            const females = analytics.sex_counts.female || 0;
+
+            const tLabel = (t) => window.getTranslatedText ? window.getTranslatedText(t, window.currentLanguage) : t;
+
+            window.lifestyleChart = new Chart(ctx, {
+                type: 'doughnut',
+                data: {
+                    labels: ['Smokers', 'Non-Smokers', 'Males', 'Females'].map(tLabel),
+                    datasets: [{
+                        label: tLabel('User Distribution'),
+                        data: [smokers, nonSmokers, males, females],
+                        backgroundColor: [
+                            'rgba(239, 68, 68, 0.75)',
+                            'rgba(34, 197, 94, 0.75)',
+                            'rgba(10, 101, 204, 0.75)',
+                            'rgba(56, 189, 248, 0.75)'
+                        ],
+                        borderColor: '#ffffff',
+                        borderWidth: 2
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        legend: {
+                            position: 'bottom',
+                            labels: {
+                                boxWidth: 12,
+                                font: { family: 'Inter', size: 11 }
+                            }
+                        }
+                    }
+                }
+            });
+        }
+
+        function renderRegionChart() {
+            const ctx = document.getElementById('regionChart').getContext('2d');
+            const regions = Object.keys(analytics.region_avg_charges);
+            const charges = Object.values(analytics.region_avg_charges);
+
+            const tLabel = (t) => window.getTranslatedText ? window.getTranslatedText(t, window.currentLanguage) : t;
+
+            window.regionChart = new Chart(ctx, {
+                type: 'bar',
+                data: {
+                    labels: regions.map(r => tLabel(r.charAt(0).toUpperCase() + r.slice(1))),
+                    datasets: [{
+                        label: tLabel('Average Predicted Charges ($)'),
+                        data: charges,
+                        backgroundColor: 'rgba(10, 101, 204, 0.75)',
+                        borderColor: '#0a65cc',
+                        borderWidth: 1,
+                        borderRadius: 4
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        legend: { display: false }
+                    },
+                    scales: {
+                        y: {
+                            beginAtZero: true,
+                            grid: { color: '#f1f5f9' },
+                            ticks: { font: { family: 'Inter', size: 10 } }
+                        },
+                        x: {
+                            grid: { display: false },
+                            ticks: { font: { family: 'Inter', size: 10 } }
+                        }
+                    }
+                }
+            });
+        }
+
+        function renderBmiChart() {
+            const ctx = document.getElementById('bmiChart').getContext('2d');
+            const categories = Object.keys(analytics.bmi_categories).filter(c => c !== 'Unknown');
+            const counts = categories.map(c => analytics.bmi_categories[c]);
+
+            const tLabel = (t) => window.getTranslatedText ? window.getTranslatedText(t, window.currentLanguage) : t;
+
+            window.bmiChart = new Chart(ctx, {
+                type: 'bar',
+                data: {
+                    labels: categories.map(tLabel),
+                    datasets: [{
+                        label: tLabel('Number of Users'),
+                        data: counts,
+                        backgroundColor: [
+                            'rgba(56, 189, 248, 0.75)',
+                            'rgba(34, 197, 94, 0.75)',
+                            'rgba(245, 158, 11, 0.75)',
+                            'rgba(239, 68, 68, 0.75)'
+                        ],
+                        borderColor: '#ffffff',
+                        borderWidth: 1,
+                        borderRadius: 4
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        legend: { display: false }
+                    },
+                    scales: {
+                        y: {
+                            beginAtZero: true,
+                            grid: { color: '#f1f5f9' },
+                            ticks: { stepSize: 1, font: { family: 'Inter', size: 10 } }
+                        },
+                        x: {
+                            grid: { display: false },
+                            ticks: { font: { family: 'Inter', size: 10 } }
+                        }
+                    }
+                }
+            });
+        }
+
+        function downloadPdfReport() {
+            const element = document.getElementById('admin-dashboard-content');
+            const opt = {
+                margin:       [10, 10, 10, 10],
+                filename:     'insure_admin_analytics_report.pdf',
+                image:        { type: 'jpeg', quality: 0.98 },
+                html2canvas:  { scale: 2, useCORS: true, logging: false },
+                jsPDF:        { unit: 'mm', format: 'a4', orientation: 'landscape' }
+            };
+            
+            // Generate report
+            html2pdf().set(opt).from(element).save();
+        }
+    </script>
+</body>
+</html>

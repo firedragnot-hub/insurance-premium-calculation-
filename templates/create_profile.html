@@ -3,92 +3,164 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>{% if profile %}Edit Profile{% else %}Account Setup{% endif %} - Premium Estimator</title>
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <title>Set Up Profile - Insure Premium Estimator</title>
+    <!-- Google Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Outfit:wght@600;700;800&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+    <script src="{{ url_for('static', filename='translator.js') }}"></script>
 </head>
-<body>
-    <div class="container">
-        <div class="glass-panel">
-            <div class="header">
-                <h1>{% if profile %}Edit Profile{% else %}Profile Setup{% endif %}</h1>
-                <p>{% if profile %}Update your details below.{% else %}Hi {{ username }}, please complete your details to finish setting up your account.{% endif %}</p>
-            </div>
-
-            {% if error %}
-            <div class="alert alert-error">
-                {{ error }}
-            </div>
-            {% endif %}
-
-            <form action="{{ url_for('create_profile') }}" method="POST">
-                <div class="form-grid">
-                    <div class="input-group">
-                        <label for="first_name">First Name</label>
-                        <input type="text" id="first_name" name="first_name" placeholder="John" value="{{ profile.first_name if profile else '' }}" required>
-                    </div>
-
-                    <div class="input-group">
-                        <label for="last_name">Last Name</label>
-                        <input type="text" id="last_name" name="last_name" placeholder="Doe" value="{{ profile.last_name if profile else '' }}" required>
-                    </div>
-
-                    <div class="input-group">
-                        <label for="age">Age</label>
-                        <input type="number" id="age" name="age" placeholder="e.g. 35" value="{{ profile.age if profile else '' }}" required min="18" max="100">
-                    </div>
-
-                    <div class="input-group">
-                        <label for="sex">Sex</label>
-                        <select id="sex" name="sex" required>
-                            <option value="" disabled {% if not profile %}selected{% endif %}>Select sex</option>
-                            <option value="male" {% if profile and profile.sex == 'male' %}selected{% endif %}>Male</option>
-                            <option value="female" {% if profile and profile.sex == 'female' %}selected{% endif %}>Female</option>
-                        </select>
-                    </div>
-
-                    <div class="input-group">
-                        <label for="bmi">BMI</label>
-                        <input type="number" id="bmi" name="bmi" step="0.1" placeholder="e.g. 24.5" value="{{ profile.bmi if profile else '' }}" required min="10" max="60">
-                    </div>
-
-                    <div class="input-group">
-                        <label for="children">Children</label>
-                        <input type="number" id="children" name="children" placeholder="e.g. 2" value="{{ profile.children if profile else '' }}" required min="0" max="15">
-                    </div>
-
-                    <div class="input-group">
-                        <label for="smoker">Smoker</label>
-                        <select id="smoker" name="smoker" required>
-                            <option value="" disabled {% if not profile %}selected{% endif %}>Select smoker status</option>
-                            <option value="yes" {% if profile and profile.smoker == 'yes' %}selected{% endif %}>Yes</option>
-                            <option value="no" {% if profile and profile.smoker == 'no' %}selected{% endif %}>No</option>
-                        </select>
-                    </div>
-
-                    <div class="input-group">
-                        <label for="region">Region</label>
-                        <select id="region" name="region" required>
-                            <option value="" disabled {% if not profile %}selected{% endif %}>Select region</option>
-                            <option value="southwest" {% if profile and profile.region == 'southwest' %}selected{% endif %}>Southwest</option>
-                            <option value="southeast" {% if profile and profile.region == 'southeast' %}selected{% endif %}>Southeast</option>
-                            <option value="northwest" {% if profile and profile.region == 'northwest' %}selected{% endif %}>Northwest</option>
-                            <option value="northeast" {% if profile and profile.region == 'northeast' %}selected{% endif %}>Northeast</option>
-                        </select>
-                    </div>
-                </div>
-
-                <button type="submit" class="submit-btn" style="margin-top: 1rem;">
-                    <span>{% if profile %}Update Profile{% else %}Complete Account Setup{% endif %}</span>
-                </button>
-
-                {% if profile %}
-                <div style="text-align: center; margin-top: 1.5rem;">
-                    <a href="{{ url_for('index') }}" class="nav-link" style="text-decoration: underline;">Cancel and Go Back</a>
-                </div>
-                {% endif %}
-            </form>
-        </div>
+<body class="auth-wrapper" style="background-color: #f3f6f9; min-height: 100vh;">
+    <div class="lang-selector-container floating-lang">
+        <select class="lang-select" id="lang-select" onchange="window.changeLanguage(this.value)">
+            <option value="en">🇺🇸 English</option>
+            <option value="hi">🇮🇳 हिंदी</option>
+            <option value="ur">🇵🇰 اردو</option>
+        </select>
     </div>
+    <div class="auth-card" style="max-width: 600px; padding: 40px 50px;">
+        <div class="auth-header">
+            <!-- Insure Logo -->
+            <svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+                <path d="M12 2C7.5 4 5 7.5 5 11c0 5.5 4.5 9 7 11 2.5-2 7-5.5 7-11 0-3.5-2.5-7-7-9zm0 2.2c2.9 1.4 4.8 4 4.8 6.8 0 4.1-3.2 7-4.8 8.4-1.6-1.4-4.8-4.3-4.8-8.4 0-2.8 1.9-5.4 4.8-6.8zm-2.5 7.3l1.8 1.8 3.5-3.5 1 1-4.5 4.5-2.8-2.8 1-1z"/>
+            </svg>
+            <h1>{% if profile %}Update Profile{% else %}Profile Setup{% endif %}</h1>
+            <p>Tell us a bit about yourself to initialize premium analytics</p>
+        </div>
+
+        {% if error %}
+        <div class="alert alert-error">
+            {{ error }}
+        </div>
+        {% endif %}
+
+        <form action="{{ url_for('create_profile') }}" method="POST" class="auth-form" id="profile-form">
+            <div class="form-row">
+                <div class="form-group">
+                    <label class="form-label" for="first_name">First Name</label>
+                    <input class="form-input" type="text" id="first_name" name="first_name" placeholder="e.g. John" value="{{ profile.first_name if profile else '' }}" required>
+                </div>
+                <div class="form-group">
+                    <label class="form-label" for="last_name">Last Name</label>
+                    <input class="form-input" type="text" id="last_name" name="last_name" placeholder="e.g. Doe" value="{{ profile.last_name if profile else '' }}" required>
+                </div>
+            </div>
+
+            <div class="form-row">
+                <div class="form-group">
+                    <label class="form-label" for="age">Age</label>
+                    <input class="form-input" type="number" id="age" name="age" min="18" max="100" placeholder="e.g. 30" value="{{ profile.age if profile else '' }}" required>
+                </div>
+                <div class="form-group">
+                    <label class="form-label">Sex</label>
+                    <div class="segmented-control">
+                        <div class="segmented-option">
+                            <input type="radio" id="sex-male" name="sex" value="male" {% if not profile or profile.sex == 'male' %}checked{% endif %}>
+                            <label class="segmented-label" for="sex-male">Male</label>
+                        </div>
+                        <div class="segmented-option">
+                            <input type="radio" id="sex-female" name="sex" value="female" {% if profile and profile.sex == 'female' %}checked{% endif %}>
+                            <label class="segmented-label" for="sex-female">Female</label>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="form-row">
+                <div class="form-group">
+                    <label class="form-label" for="bmi">Body Mass Index (BMI)</label>
+                    <input class="form-input" type="number" id="bmi" name="bmi" min="10" max="60" step="0.1" placeholder="e.g. 24.5" value="{{ profile.bmi if profile else '' }}" required>
+                </div>
+                <div class="form-group">
+                    <label class="form-label" for="children">Dependent Children</label>
+                    <input class="form-input" type="number" id="children" name="children" min="0" max="10" placeholder="e.g. 0" value="{{ profile.children if profile else '0' }}" required>
+                </div>
+            </div>
+
+            <!-- BMI Helper Expansion -->
+            <div class="bmi-helper">
+                <div class="bmi-helper-title" onclick="toggleBmiHelper()">
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="18" height="18" rx="2" ry="2"/><line x1="9" y1="9" x2="15" y2="9"/><line x1="9" y1="13" x2="15" y2="13"/><line x1="9" y1="17" x2="15" y2="17"/></svg>
+                    <span>Don't know your BMI? Calculate it here</span>
+                </div>
+                <div class="bmi-helper-content" id="bmi-helper-content" style="display: none; padding-top: 10px;">
+                    <div class="bmi-helper-inputs">
+                        <div>
+                            <label class="form-label" style="font-size: 11px;" for="height">Height (cm)</label>
+                            <input class="form-input" style="height: 38px; font-size: 13px;" type="number" id="height" placeholder="e.g. 175">
+                        </div>
+                        <div>
+                            <label class="form-label" style="font-size: 11px;" for="weight">Weight (kg)</label>
+                            <input class="form-input" style="height: 38px; font-size: 13px;" type="number" id="weight" placeholder="e.g. 70">
+                        </div>
+                    </div>
+                    <button type="button" class="bmi-helper-btn" onclick="applyCalculatedBmi()">Calculate & Apply BMI</button>
+                </div>
+            </div>
+
+            <div class="form-row" style="margin-top: 12px;">
+                <div class="form-group">
+                    <label class="form-label">Smoker Status</label>
+                    <div class="segmented-control">
+                        <div class="segmented-option">
+                            <input type="radio" id="smoker-no" name="smoker" value="no" {% if not profile or profile.smoker == 'no' %}checked{% endif %}>
+                            <label class="segmented-label" for="smoker-no">Non-Smoker</label>
+                        </div>
+                        <div class="segmented-option">
+                            <input type="radio" id="smoker-yes" name="smoker" value="yes" {% if profile and profile.smoker == 'yes' %}checked{% endif %}>
+                            <label class="segmented-label" for="smoker-yes">Smoker</label>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="form-group">
+                    <label class="form-label">Region</label>
+                    <div class="region-grid">
+                        <div class="region-card {% if not profile or profile.region == 'northeast' %}selected{% endif %}" onclick="selectRegion('northeast', this)">Northeast</div>
+                        <div class="region-card {% if profile and profile.region == 'northwest' %}selected{% endif %}" onclick="selectRegion('northwest', this)">Northwest</div>
+                        <div class="region-card {% if profile and profile.region == 'southeast' %}selected{% endif %}" onclick="selectRegion('southeast', this)">Southeast</div>
+                        <div class="region-card {% if profile and profile.region == 'southwest' %}selected{% endif %}" onclick="selectRegion('southwest', this)">Southwest</div>
+                    </div>
+                    <input type="hidden" id="region" name="region" value="{{ profile.region if profile else 'northeast' }}">
+                </div>
+            </div>
+
+            <div style="margin-top: 16px;"></div>
+
+            <button type="submit" class="btn btn-primary" style="height: 52px; border-radius: var(--radius-md); font-size: 16px; width: 100%;">
+                {% if profile %}Save Profile Changes{% else %}Complete Registration{% endif %}
+            </button>
+        </form>
+    </div>
+
+    <script>
+        function toggleBmiHelper() {
+            const content = document.getElementById('bmi-helper-content');
+            content.style.display = content.style.display === 'none' ? 'block' : 'none';
+        }
+
+        function applyCalculatedBmi() {
+            const height = parseFloat(document.getElementById('height').value);
+            const weight = parseFloat(document.getElementById('weight').value);
+            
+            if (!height || !weight || height <= 0 || weight <= 0) {
+                alert('Please enter valid height and weight values.');
+                return;
+            }
+
+            const heightInMeters = height / 100;
+            const calculatedBmi = weight / (heightInMeters * heightInMeters);
+            
+            document.getElementById('bmi').value = calculatedBmi.toFixed(1);
+            toggleBmiHelper();
+        }
+
+        function selectRegion(regionCode, element) {
+            document.querySelectorAll('.region-card').forEach(card => card.classList.remove('selected'));
+            element.classList.add('selected');
+            document.getElementById('region').value = regionCode;
+        }
+    </script>
 </body>
 </html>

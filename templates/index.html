@@ -3,157 +3,663 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Health Insurance Premium Estimator</title>
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <title>Insure - Premium Predictive Dashboard</title>
+    <!-- Google Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Outfit:wght@400;500;600;700;800&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+    <script src="{{ url_for('static', filename='translator.js') }}"></script>
 </head>
 <body class="has-navbar">
-    <nav class="navbar">
-        <a href="/" class="navbar-brand">Premium Estimator</a>
+
+    <!-- Header / Navbar -->
+    <header class="navbar">
+        <a href="/" class="logo">
+            <svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+                <path d="M12 2C7.5 4 5 7.5 5 11c0 5.5 4.5 9 7 11 2.5-2 7-5.5 7-11 0-3.5-2.5-7-7-9zm0 2.2c2.9 1.4 4.8 4 4.8 6.8 0 4.1-3.2 7-4.8 8.4-1.6-1.4-4.8-4.3-4.8-8.4 0-2.8 1.9-5.4 4.8-6.8zm-2.5 7.3l1.8 1.8 3.5-3.5 1 1-4.5 4.5-2.8-2.8 1-1z"/>
+            </svg>
+            <span>Insure</span>
+        </a>
         <div class="navbar-user">
+            <div class="lang-selector-container">
+                <select class="lang-select" id="lang-select" onchange="window.changeLanguage(this.value)">
+                    <option value="en">🇺🇸 English</option>
+                    <option value="hi">🇮🇳 हिंदी</option>
+                    <option value="ur">🇵🇰 اردو</option>
+                </select>
+            </div>
             <span class="user-info">Welcome, <strong>{{ profile.first_name }} {{ profile.last_name }}</strong></span>
+            {% if session.get('is_admin') %}
+            <a href="{{ url_for('admin_dashboard') }}" class="nav-link" style="color: var(--primary); font-weight: 600; border: 1px solid rgba(10, 101, 204, 0.15); background-color: var(--primary-light);">Admin Panel</a>
+            {% endif %}
             <a href="{{ url_for('create_profile') }}" class="nav-link">Edit Profile</a>
             <a href="{{ url_for('logout') }}" class="nav-link logout-btn">Logout</a>
         </div>
-    </nav>
-    <div class="container">
-        <div class="glass-panel">
-            <div class="header">
-                <h1>Premium Estimator</h1>
-                <p>Calculate your estimated health insurance cost instantly.</p>
-            </div>
-            
-            <form id="prediction-form">
-                <div class="form-grid">
-                    <div class="input-group">
-                        <label for="age">Age</label>
-                        <input type="number" id="age" name="age" placeholder="e.g. 35" value="{{ profile.age }}" required min="18" max="100">
-                    </div>
+    </header>
 
-                    <div class="input-group">
-                        <label for="sex">Sex</label>
-                        <select id="sex" name="sex" required>
-                            <option value="" disabled>Select sex</option>
-                            <option value="male" {% if profile.sex == 'male' %}selected{% endif %}>Male</option>
-                            <option value="female" {% if profile.sex == 'female' %}selected{% endif %}>Female</option>
-                        </select>
-                    </div>
-
-                    <div class="input-group">
-                        <label for="bmi">BMI</label>
-                        <input type="number" id="bmi" name="bmi" step="0.1" placeholder="e.g. 24.5" value="{{ profile.bmi }}" required min="10" max="60">
-                    </div>
-
-                    <div class="input-group">
-                        <label for="children">Children</label>
-                        <input type="number" id="children" name="children" placeholder="e.g. 2" value="{{ profile.children }}" required min="0" max="15">
-                    </div>
-
-                    <div class="input-group">
-                        <label for="smoker">Smoker</label>
-                        <select id="smoker" name="smoker" required>
-                            <option value="" disabled>Select smoker status</option>
-                            <option value="yes" {% if profile.smoker == 'yes' %}selected{% endif %}>Yes</option>
-                            <option value="no" {% if profile.smoker == 'no' %}selected{% endif %}>No</option>
-                        </select>
-                    </div>
-
-                    <div class="input-group">
-                        <label for="region">Region</label>
-                        <select id="region" name="region" required>
-                            <option value="" disabled>Select region</option>
-                            <option value="southwest" {% if profile.region == 'southwest' %}selected{% endif %}>Southwest</option>
-                            <option value="southeast" {% if profile.region == 'southeast' %}selected{% endif %}>Southeast</option>
-                            <option value="northwest" {% if profile.region == 'northwest' %}selected{% endif %}>Northwest</option>
-                            <option value="northeast" {% if profile.region == 'northeast' %}selected{% endif %}>Northeast</option>
-                        </select>
-                    </div>
+    <!-- Hero Section -->
+    <section class="hero">
+        <div class="container hero-grid">
+            <div class="hero-content">
+                <div class="hero-tag">Predictive Analytics Platform</div>
+                <h1 class="hero-title">The Best Insurance Begins Here</h1>
+                <p class="hero-desc">Calculate your customized insurance costs using our high-precision Random Forest machine learning engine. Get instant breakdowns and lifestyle suggestions.</p>
+                <div class="hero-actions">
+                    <a href="#calculator-section" class="btn btn-primary">Start Estimator</a>
+                    <a href="{{ url_for('create_profile') }}" class="btn btn-secondary">Edit Demographics</a>
                 </div>
-
-                <button type="submit" class="submit-btn" id="submit-btn">
-                    <span class="btn-text">Estimate Premium</span>
-                    <span class="loader" style="display: none;"></span>
-                </button>
-            </form>
-
-            <div id="result-container" class="result-container" style="display: none;">
-                <h2>Estimated Annual Premium</h2>
-                <div class="price-tag" id="price-output">$0.00</div>
-                <button class="reset-btn" onclick="resetForm()">Calculate Another</button>
             </div>
-            
-            <div id="error-container" class="error-container" style="display: none;">
-                <p id="error-message">An error occurred.</p>
+            <div class="hero-image-container">
+                <div class="hero-image-decor"></div>
+                <img src="/static/images/family.png" alt="Happy family smiling" class="hero-image">
             </div>
         </div>
-    </div>
+    </section>
 
+    <!-- Main Content -->
+    <main class="container main-app" id="calculator-section">
+        <div class="section-header">
+            <h2>Instant Premium Estimator</h2>
+            <p>Your profile values have been pre-filled. Customize inputs below to predict hypothetical scenarios.</p>
+        </div>
+
+        <div class="calculator-grid">
+            <!-- Form Card -->
+            <div class="card">
+                <form id="calculator-form" onsubmit="calculatePremium(event)">
+                    
+                    <div class="form-row">
+                        <!-- Age Input -->
+                        <div class="form-group">
+                            <label class="form-label" for="age">Age</label>
+                            <input class="form-input" type="number" id="age" name="age" min="1" max="120" required placeholder="e.g. 28" value="{{ profile.age }}">
+                        </div>
+
+                        <!-- Sex Control -->
+                        <div class="form-group">
+                            <label class="form-label">Sex</label>
+                            <div class="segmented-control">
+                                <div class="segmented-option">
+                                    <input type="radio" id="sex-male" name="sex" value="male" {% if profile.sex == 'male' %}checked{% endif %}>
+                                    <label class="segmented-label" for="sex-male">Male</label>
+                                </div>
+                                <div class="segmented-option">
+                                    <input type="radio" id="sex-female" name="sex" value="female" {% if profile.sex == 'female' %}checked{% endif %}>
+                                    <label class="segmented-label" for="sex-female">Female</label>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="form-row">
+                        <!-- BMI Input -->
+                        <div class="form-group">
+                            <label class="form-label" for="bmi">Body Mass Index (BMI)</label>
+                            <input class="form-input" type="number" id="bmi" name="bmi" min="10" max="60" step="0.1" required placeholder="e.g. 24.5" value="{{ profile.bmi }}">
+                        </div>
+
+                        <!-- Children count -->
+                        <div class="form-group">
+                            <label class="form-label" for="children">Dependent Children</label>
+                            <input class="form-input" type="number" id="children" name="children" min="0" max="10" required value="{{ profile.children }}">
+                        </div>
+                    </div>
+
+                    <!-- Expandable BMI Helper tool -->
+                    <div class="bmi-helper">
+                        <div class="bmi-helper-title" onclick="toggleBmiHelper()">
+                            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="18" height="18" rx="2" ry="2"/><line x1="9" y1="9" x2="15" y2="9"/><line x1="9" y1="13" x2="15" y2="13"/><line x1="9" y1="17" x2="15" y2="17"/></svg>
+                            <span>Need to calculate BMI? Toggle here</span>
+                        </div>
+                        <div class="bmi-helper-content" id="bmi-helper-content" style="display: none; padding-top: 10px;">
+                            <div class="bmi-helper-inputs">
+                                <div>
+                                    <label class="form-label" style="font-size: 11px;" for="height">Height (cm)</label>
+                                    <input class="form-input" style="height: 38px; font-size: 13px;" type="number" id="height" placeholder="e.g. 175">
+                                </div>
+                                <div>
+                                    <label class="form-label" style="font-size: 11px;" for="weight">Weight (kg)</label>
+                                    <input class="form-input" style="height: 38px; font-size: 13px;" type="number" id="weight" placeholder="e.g. 70">
+                                </div>
+                            </div>
+                            <button type="button" class="bmi-helper-btn" onclick="applyCalculatedBmi()">Calculate & Apply BMI</button>
+                        </div>
+                    </div>
+
+                    <div style="margin-top: 24px;"></div>
+
+                    <div class="form-row">
+                        <!-- Smoker Toggle -->
+                        <div class="form-group">
+                            <label class="form-label">Smoker Status</label>
+                            <div class="toggle-switch-container">
+                                <span class="toggle-switch-label">Do you smoke?</span>
+                                <label class="toggle-switch">
+                                    <input type="checkbox" id="smoker" name="smoker" value="yes" {% if profile.smoker == 'yes' %}checked{% endif %}>
+                                    <span class="slider"></span>
+                                </label>
+                            </div>
+                        </div>
+
+                        <!-- Region selection -->
+                        <div class="form-group">
+                            <label class="form-label">Region</label>
+                            <div class="region-grid">
+                                <div class="region-card {% if profile.region == 'northeast' %}selected{% endif %}" onclick="selectRegion('northeast', this)">Northeast</div>
+                                <div class="region-card {% if profile.region == 'northwest' %}selected{% endif %}" onclick="selectRegion('northwest', this)">Northwest</div>
+                                <div class="region-card {% if profile.region == 'southeast' %}selected{% endif %}" onclick="selectRegion('southeast', this)">Southeast</div>
+                                <div class="region-card {% if profile.region == 'southwest' %}selected{% endif %}" onclick="selectRegion('southwest', this)">Southwest</div>
+                            </div>
+                            <input type="hidden" id="region" name="region" value="{{ profile.region }}">
+                        </div>
+                    </div>
+
+                    <button type="submit" class="btn btn-primary" style="width: 100%; height: 52px; border-radius: var(--radius-md); font-size: 16px;">
+                        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg>
+                        Calculate Premium
+                    </button>
+                </form>
+            </div>
+
+            <!-- Output Card -->
+            <div class="results-card">
+                <!-- Empty state -->
+                <div class="results-empty" id="results-empty">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor">
+                        <circle cx="12" cy="12" r="10"/><line x1="12" y1="16" x2="12" y2="12"/><line x1="12" y1="8" x2="12.01" y2="8"/>
+                    </svg>
+                    <h3>Prediction Engine</h3>
+                    <p>Modify form values and click "Calculate Premium" to get your estimated premium quote.</p>
+                </div>
+
+                <!-- Loading State -->
+                <div class="loader-container" id="results-loader">
+                    <div class="spinner"></div>
+                    <p style="color: var(--gray-300); font-weight: 500;">Retrieving AI Prediction...</p>
+                </div>
+
+                <!-- Display results -->
+                <div class="results-content" id="results-content" style="display: none;">
+                    <div class="premium-header">
+                        <span class="premium-tag">Predicted Charge</span>
+                        <div class="premium-amount" id="val-annual">$0.00</div>
+                        <span class="premium-subtext" id="val-monthly">Or $0.00 / month</span>
+                    </div>
+
+                    <div class="premium-details">
+                        <div class="premium-detail-row">
+                            <span class="premium-detail-label">Age / Sex</span>
+                            <span class="premium-detail-value" id="res-age-sex">-</span>
+                        </div>
+                        <div class="premium-detail-row">
+                            <span class="premium-detail-label">BMI Value</span>
+                            <span class="premium-detail-value" id="res-bmi">-</span>
+                        </div>
+                        <div class="premium-detail-row">
+                            <span class="premium-detail-label">Dependents</span>
+                            <span class="premium-detail-value" id="res-children">-</span>
+                        </div>
+                        <div class="premium-detail-row">
+                            <span class="premium-detail-label">Region</span>
+                            <span class="premium-detail-value" id="res-region">-</span>
+                        </div>
+                    </div>
+
+                    <!-- What-If Analysis box -->
+                    <div class="what-if-box" id="what-if-box" style="display: none;">
+                        <div class="what-if-title">
+                            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 20h9"/><path d="M16.5 3.5a2.12 2.12 0 0 1 3 3L7 19l-4 1 1-4Z"/></svg>
+                            <span>Lifestyle Adjustments</span>
+                        </div>
+                        <div id="what-if-suggestions"></div>
+                    </div>
+
+                    <button class="btn btn-outline" id="save-btn" onclick="saveQuote()" style="width: 100%; border-color: var(--accent); color: var(--accent); margin-top: 20px;">
+                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"/><polyline points="17 21 17 13 7 13 7 21"/><polyline points="7 3 7 8 15 8"/></svg>
+                        Save Quote to Database
+                    </button>
+                </div>
+
+                <!-- DB status -->
+                <div class="db-status-bar">
+                    <span class="status-dot offline" id="db-status-dot"></span>
+                    <span id="db-status-text">Database: Connected</span>
+                </div>
+            </div>
+        </div>
+
+        <!-- History Dashboard -->
+        <div class="history-section">
+            <div class="history-header">
+                <div class="history-title">
+                    <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="var(--primary)" stroke-width="2"><path d="M12 8v4l3 3"/><circle cx="12" cy="12" r="10"/></svg>
+                    <span>Your Saved Calculations</span>
+                </div>
+                
+                <div class="filters-toolbar">
+                    <select class="filter-select" id="filter-smoker" onchange="loadHistory()">
+                        <option value="">All Smoker Statuses</option>
+                        <option value="yes">Smokers</option>
+                        <option value="no">Non-Smokers</option>
+                    </select>
+
+                    <select class="filter-select" id="filter-region" onchange="loadHistory()">
+                        <option value="">All Regions</option>
+                        <option value="northeast">Northeast</option>
+                        <option value="northwest">Northwest</option>
+                        <option value="southeast">Southeast</option>
+                        <option value="southwest">Southwest</option>
+                    </select>
+                </div>
+            </div>
+
+            <div class="table-responsive">
+                <table class="history-table">
+                    <thead>
+                        <tr>
+                            <th>Age</th>
+                            <th>Sex</th>
+                            <th>BMI</th>
+                            <th>Children</th>
+                            <th>Smoker</th>
+                            <th>Region</th>
+                            <th>Charges Quote</th>
+                            <th>Date Calculated</th>
+                            <th style="width: 100px; text-align: right;">Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody id="history-list">
+                        <tr>
+                            <td colspan="9" class="empty-history-row">Fetching saved quotes...</td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </main>
+
+    <!-- Footer -->
+    <footer>
+        <div class="container">
+            <div class="footer-grid">
+                <div class="footer-brand">
+                    <h3>Insure</h3>
+                    <p>Providing intelligent premium forecasting services. Powered by secure machine learning models.</p>
+                </div>
+                <div class="footer-links">
+                    <h4>Insurance Solutions</h4>
+                    <ul>
+                        <li><a href="#">Health Cover</a></li>
+                        <li><a href="#">Family Coverage</a></li>
+                        <li><a href="#">Corporate Benefits</a></li>
+                        <li><a href="#">Life Insurance</a></li>
+                    </ul>
+                </div>
+                <div class="footer-links">
+                    <h4>Resources</h4>
+                    <ul>
+                        <li><a href="#">Interactive Dashboard</a></li>
+                        <li><a href="#">How AI Predicts Plan Rates</a></li>
+                        <li><a href="#">Health FAQ</a></li>
+                        <li><a href="#">Security Terms</a></li>
+                    </ul>
+                </div>
+                <div class="footer-links">
+                    <h4>Contact Us</h4>
+                    <ul>
+                        <li style="color: var(--gray-450); font-size: 13px;">123 Premium Way, City Centre</li>
+                        <li style="color: var(--gray-450); font-size: 13px;">Email: support@insure.com</li>
+                        <li style="color: var(--gray-450); font-size: 13px;">Tel: +1 (555) 123-4567</li>
+                    </ul>
+                </div>
+            </div>
+            
+            <div class="footer-bottom">
+                <p>&copy; 2026 Insure Premium Predictor. All rights reserved.</p>
+                <p>Protected by MongoDB Encryption & Fallback Protocols</p>
+            </div>
+        </div>
+    </footer>
+
+    <!-- Scripting -->
     <script>
-        document.getElementById('prediction-form').addEventListener('submit', async function(e) {
-            e.preventDefault();
+        let lastCalculation = null;
+
+        document.addEventListener('DOMContentLoaded', () => {
+            checkDbStatus();
+            loadHistory();
+        });
+
+        function toggleBmiHelper() {
+            const content = document.getElementById('bmi-helper-content');
+            content.style.display = content.style.display === 'none' ? 'block' : 'none';
+        }
+
+        function applyCalculatedBmi() {
+            const height = parseFloat(document.getElementById('height').value);
+            const weight = parseFloat(document.getElementById('weight').value);
             
-            const btn = document.getElementById('submit-btn');
-            const btnText = btn.querySelector('.btn-text');
-            const loader = btn.querySelector('.loader');
+            if (!height || !weight || height <= 0 || weight <= 0) {
+                alert('Please enter valid height and weight values.');
+                return;
+            }
+
+            const heightInMeters = height / 100;
+            const calculatedBmi = weight / (heightInMeters * heightInMeters);
             
-            // UI Loading state
-            btn.disabled = true;
-            btnText.style.display = 'none';
-            loader.style.display = 'inline-block';
+            document.getElementById('bmi').value = calculatedBmi.toFixed(1);
+            toggleBmiHelper();
+        }
+
+        function selectRegion(regionCode, element) {
+            document.querySelectorAll('.region-card').forEach(card => card.classList.remove('selected'));
+            element.classList.add('selected');
+            document.getElementById('region').value = regionCode;
+        }
+
+        async function checkDbStatus() {
+            try {
+                const response = await fetch('/api/db-status');
+                const data = await response.json();
+                
+                const dot = document.getElementById('db-status-dot');
+                const text = document.getElementById('db-status-text');
+                
+                if (data.status === 'online') {
+                    dot.className = 'status-dot online';
+                    text.innerText = 'Database: Connected (MongoDB)';
+                } else {
+                    dot.className = 'status-dot offline';
+                    text.innerText = 'Database: Offline (SQLite Fallback)';
+                }
+            } catch (err) {
+                const dot = document.getElementById('db-status-dot');
+                const text = document.getElementById('db-status-text');
+                dot.className = 'status-dot offline';
+                text.innerText = 'Database: Offline (Unreachable)';
+            }
+            if (window.translatePage) window.translatePage(window.currentLanguage);
+        }
+
+        async function calculatePremium(event) {
+            event.preventDefault();
             
-            const formData = {
-                age: document.getElementById('age').value,
-                sex: document.getElementById('sex').value,
-                bmi: document.getElementById('bmi').value,
-                children: document.getElementById('children').value,
-                smoker: document.getElementById('smoker').value,
-                region: document.getElementById('region').value
-            };
+            const age = parseInt(document.getElementById('age').value);
+            const sex = document.querySelector('input[name="sex"]:checked').value;
+            const bmi = parseFloat(document.getElementById('bmi').value);
+            const children = parseInt(document.getElementById('children').value);
+            const smoker = document.getElementById('smoker').checked ? 'yes' : 'no';
+            const region = document.getElementById('region').value;
+
+            // Load UI State
+            document.getElementById('results-empty').style.display = 'none';
+            document.getElementById('results-content').style.display = 'none';
+            document.getElementById('results-loader').style.display = 'flex';
+
+            const payload = { age, sex, bmi, children, smoker, region };
 
             try {
                 const response = await fetch('/predict', {
                     method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json'
-                    },
-                    body: JSON.stringify(formData)
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(payload)
                 });
                 
+                const result = await response.json();
+                
+                if (!result.success) {
+                    throw new Error(result.error || 'Estimation failed');
+                }
+                
+                lastCalculation = {
+                    ...payload,
+                    charges: result.prediction
+                };
+
+                // Update UI Display
+                document.getElementById('val-annual').innerText = `$${result.prediction.toLocaleString('en-US', {minimumFractionDigits: 2, maximumFractionDigits: 2})}`;
+                document.getElementById('val-monthly').innerText = `Or $${(result.prediction / 12).toLocaleString('en-US', {minimumFractionDigits: 2, maximumFractionDigits: 2})} / month`;
+                
+                document.getElementById('res-age-sex').innerText = `${age} yrs / ${sex.charAt(0).toUpperCase() + sex.slice(1)}`;
+                document.getElementById('res-bmi').innerText = `${bmi.toFixed(1)} (${getBmiCategory(bmi)})`;
+                document.getElementById('res-children').innerText = children;
+                document.getElementById('res-region').innerText = region.charAt(0).toUpperCase() + region.slice(1);
+
+                // Run What-If Predictions
+                await runWhatIfAnalysis(payload, result.prediction);
+
+                document.getElementById('results-loader').style.display = 'none';
+                document.getElementById('results-content').style.display = 'block';
+                if (window.translatePage) window.translatePage(window.currentLanguage);
+
+            } catch (err) {
+                alert('Error predicting premium: ' + err.message);
+                document.getElementById('results-loader').style.display = 'none';
+                document.getElementById('results-empty').style.display = 'flex';
+            }
+        }
+
+        function getBmiCategory(bmi) {
+            if (bmi < 18.5) return 'Underweight';
+            if (bmi < 25) return 'Healthy';
+            if (bmi < 30) return 'Overweight';
+            return 'Obese';
+        }
+
+        async function runWhatIfAnalysis(data, currentCharges) {
+            const suggestions = [];
+            const whatIfBox = document.getElementById('what-if-box');
+            const whatIfList = document.getElementById('what-if-suggestions');
+            whatIfList.innerHTML = '';
+
+            // 1. Smoker savings check
+            if (data.smoker === 'yes') {
+                try {
+                    const cleanPayload = { ...data, smoker: 'no' };
+                    const response = await fetch('/predict', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify(cleanPayload)
+                    });
+                    const res = await response.json();
+                    if (res.success) {
+                        const savings = currentCharges - res.prediction;
+                        if (savings > 0) {
+                            suggestions.push(`Quitting smoking could save you up to <strong>$${savings.toLocaleString('en-US', {maximumFractionDigits: 0})}</strong> per year!`);
+                        }
+                    }
+                } catch (e) {
+                    console.error(e);
+                }
+            }
+
+            // 2. BMI savings check (if BMI >= 25.0)
+            if (data.bmi >= 25.0) {
+                try {
+                    const healthyBmiPayload = { ...data, bmi: 22.0 };
+                    const response = await fetch('/predict', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify(healthyBmiPayload)
+                    });
+                    const res = await response.json();
+                    if (res.success) {
+                        const savings = currentCharges - res.prediction;
+                        if (savings > 0) {
+                            suggestions.push(`Reaching a healthy BMI (22.0) could save you up to <strong>$${savings.toLocaleString('en-US', {maximumFractionDigits: 0})}</strong> per year!`);
+                        }
+                    }
+                } catch (e) {
+                    console.error(e);
+                }
+            }
+
+            if (suggestions.length > 0) {
+                suggestions.forEach(s => {
+                    const li = document.createElement('div');
+                    li.className = 'what-if-item';
+                    li.innerHTML = s;
+                    whatIfList.appendChild(li);
+                });
+                whatIfBox.style.display = 'block';
+            } else {
+                whatIfBox.style.display = 'none';
+            }
+        }
+
+        async function saveQuote() {
+            if (!lastCalculation) return;
+
+            const saveBtn = document.getElementById('save-btn');
+            saveBtn.innerText = 'Saving Quote...';
+            saveBtn.disabled = true;
+
+            try {
+                const response = await fetch('/api/quotes', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(lastCalculation)
+                });
+                
+                if (response.ok) {
+                    alert('Quote successfully saved to database history!');
+                    saveBtn.innerHTML = `
+                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="20 6 9 17 4 12"/></svg>
+                        Saved Successfully
+                    `;
+                    setTimeout(() => {
+                        saveBtn.disabled = false;
+                        saveBtn.innerHTML = `
+                            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"/><polyline points="17 21 17 13 7 13 7 21"/><polyline points="7 3 7 8 15 8"/></svg>
+                            Save Quote to Database
+                        `;
+                    }, 2000);
+                    
+                    loadHistory();
+                    checkDbStatus();
+                } else {
+                    throw new Error('Failed to save');
+                }
+            } catch (err) {
+                alert('Error saving quote to history: ' + err.message);
+                saveBtn.disabled = false;
+                saveBtn.innerHTML = `Save Quote to Database`;
+            }
+        }
+
+        async function loadHistory() {
+            const listContainer = document.getElementById('history-list');
+            const smoker = document.getElementById('filter-smoker').value;
+            const region = document.getElementById('filter-region').value;
+            
+            let url = '/api/quotes?';
+            if (smoker) url += `smoker=${smoker}&`;
+            if (region) url += `region=${region}&`;
+
+            try {
+                const response = await fetch(url);
                 const data = await response.json();
                 
-                document.getElementById('prediction-form').style.display = 'none';
+                listContainer.innerHTML = '';
                 
-                if (data.success) {
-                    const priceFormatted = new Intl.NumberFormat('en-US', {
-                        style: 'currency',
-                        currency: 'USD'
-                    }).format(data.prediction);
-                    
-                    document.getElementById('price-output').textContent = priceFormatted;
-                    document.getElementById('result-container').style.display = 'block';
-                    document.getElementById('error-container').style.display = 'none';
-                } else {
-                    document.getElementById('error-message').textContent = "Error: " + data.error;
-                    document.getElementById('error-container').style.display = 'block';
-                    document.getElementById('result-container').style.display = 'none';
+                if (data.length === 0) {
+                    listContainer.innerHTML = `
+                        <tr>
+                            <td colspan="9" class="empty-history-row">No quotes saved in your history list yet.</td>
+                        </tr>
+                    `;
+                    return;
                 }
-            } catch (error) {
-                document.getElementById('prediction-form').style.display = 'none';
-                document.getElementById('error-message').textContent = "Connection error. Please try again.";
-                document.getElementById('error-container').style.display = 'block';
-            } finally {
-                // Restore button
-                btn.disabled = false;
-                btnText.style.display = 'inline-block';
-                loader.style.display = 'none';
-            }
-        });
 
-        function resetForm() {
-            document.getElementById('prediction-form').reset();
-            document.getElementById('prediction-form').style.display = 'block';
-            document.getElementById('result-container').style.display = 'none';
-            document.getElementById('error-container').style.display = 'none';
+                data.forEach(item => {
+                    const row = document.createElement('tr');
+                    const dateObj = new Date(item.timestamp);
+                    const formattedDate = dateObj.toLocaleDateString('en-US', {
+                        month: 'short',
+                        day: 'numeric',
+                        year: 'numeric',
+                        hour: '2-digit',
+                        minute: '2-digit'
+                    });
+
+                    row.innerHTML = `
+                        <td><strong>${item.age}</strong></td>
+                        <td>${item.sex.charAt(0).toUpperCase() + item.sex.slice(1)}</td>
+                        <td>${item.bmi.toFixed(1)}</td>
+                        <td>${item.children}</td>
+                        <td>
+                            <span class="badge badge-smoker-${item.smoker}">
+                                ${item.smoker.toUpperCase()}
+                            </span>
+                        </td>
+                        <td>${item.region.charAt(0).toUpperCase() + item.region.slice(1)}</td>
+                        <td><strong>$${item.charges.toLocaleString('en-US', {minimumFractionDigits: 2, maximumFractionDigits: 2})}</strong></td>
+                        <td style="color: var(--gray-400); font-size: 12px;">${formattedDate}</td>
+                        <td style="text-align: right;">
+                            <div class="history-actions-cell">
+                                <button class="btn-action btn-action-load" onclick='loadItemToForm(${JSON.stringify(item)})' title="Reload Details">
+                                    <svg viewBox="0 0 24 24"><path d="M17.65 6.35C16.2 4.9 14.21 4 12 4c-4.42 0-7.99 3.58-7.99 8s3.57 8 7.99 8c3.73 0 6.84-2.55 7.73-6h-2.08c-.82 2.33-3.04 4-5.65 4-3.31 0-6-2.69-6-6s2.69-6 6-6c1.66 0 3.14.69 4.22 1.78L13 11h7V4l-2.35 2.35z"/></svg>
+                                </button>
+                                <button class="btn-action btn-action-delete" onclick="deleteHistoryItem('${item.id}')" title="Delete Quote">
+                                    <svg viewBox="0 0 24 24"><path d="M6 19c0 1.1.9 2 2 2h8c1.1 0 2-.9 2-2V7H6v12zM19 4h-3.5l-1-1h-5l-1 1H5v2h14V4z"/></svg>
+                                </button>
+                            </div>
+                        </td>
+                    `;
+                    listContainer.appendChild(row);
+                });
+            } catch (err) {
+                listContainer.innerHTML = `
+                    <tr>
+                        <td colspan="9" class="empty-history-row" style="color: var(--danger);">Failed to retrieve history logs.</td>
+                    </tr>
+                `;
+            }
+            if (window.translatePage) window.translatePage(window.currentLanguage);
+        }
+
+        function loadItemToForm(item) {
+            document.getElementById('age').value = item.age;
+            document.getElementById('bmi').value = item.bmi;
+            document.getElementById('children').value = item.children;
+            
+            if (item.sex === 'male') {
+                document.getElementById('sex-male').checked = true;
+            } else {
+                document.getElementById('sex-female').checked = true;
+            }
+
+            document.getElementById('smoker').checked = (item.smoker === 'yes');
+
+            document.querySelectorAll('.region-card').forEach(card => {
+                card.classList.remove('selected');
+                if (card.innerText.toLowerCase() === item.region.toLowerCase()) {
+                    card.classList.add('selected');
+                }
+            });
+            document.getElementById('region').value = item.region;
+
+            document.getElementById('calculator-section').scrollIntoView({ behavior: 'smooth' });
+        }
+
+        async function deleteHistoryItem(id) {
+            if (!confirm('Are you sure you want to delete this quote from history?')) return;
+
+            try {
+                const response = await fetch(`/api/quotes/${id}`, {
+                    method: 'DELETE'
+                });
+                
+                if (response.ok) {
+                    loadHistory();
+                    checkDbStatus();
+                } else {
+                    throw new Error('Failed to delete');
+                }
+            } catch (err) {
+                alert('Error deleting quote entry: ' + err.message);
+            }
         }
     </script>
 </body>
